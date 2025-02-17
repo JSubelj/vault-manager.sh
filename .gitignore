@@ -1,0 +1,6 @@
+*
+!.gitignore
+!vault-manager.sh
+!README.md
+!env
+!LICENSE.md
