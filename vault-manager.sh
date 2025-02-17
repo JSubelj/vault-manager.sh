@@ -35,7 +35,15 @@ show_help() {
     echo
     echo "If no command it just checks crypttab"
     echo
-    echo "Commands:"
+    echo "Primary commands:"
+    echo "  check-storage-system                  Check if storage system is mounted and operational"
+    echo "  setup-storage-system                  Setup and initialize the complete storage system"
+    echo "  close-storage-system                  Safely close and lock the storage system"
+    echo
+    echo "Initialisation commands:"
+    echo "  init-drive <block-dev>                Initialises the drive"
+    echo
+    echo "Debug commands:"
     echo "  encrypt <input_file> <output_file>    Encrypt a file"
     echo "  decrypt <input_file> <output_file>    Decrypt a file"
     echo "  hdd-lock                              Lock all encrypted drives"
@@ -44,10 +52,6 @@ show_help() {
     echo "  umount-drives                         Unmount individual encrypted drives"
     echo "  mount-fs                              Mount the combined filesystem"
     echo "  umount-fs                             Unmount the combined filesystem"
-    echo "  setup-storage-system                  Setup and initialize the complete storage system"
-    echo "  close-storage-system                  Safely close and lock the storage system"
-    echo "  init-drive <block-dev>                Initialises the drive"
-    echo "  check-storage-system                  Check if storage system is mounted and operational"
     echo
     echo "Options:"
     echo "  -h, --help                            Show this help message"
@@ -496,6 +500,7 @@ init_drive() {
     remove_cryptkey
 
     log INFO "Drive $block_dev initialized successfully. On next setup-storage-system, your device will be added to mergerfs array."
+    log WARN "HEADER BACKUP FILES CAN BE USED TO UNLOCK YOUR DRIVES, HIDE IN SAFE PLACE!"
 }
 
 # Main script logic
