@@ -3,7 +3,7 @@ CRYPTTAB="$HDD_ENCRYPT_DIR/crypttab"
 KEY_FILE="/tmp/cryptkey"
 TARGET_BASE_NAME="crypt"
 HEADERS_BACKUP_DIR="$HDD_ENCRYPT_DIR/header-backup-files"
-MERGERFS_OPTIONS="cache.files=off,dropcacheonclose=false,category.create=lus"
+MERGERFS_OPTIONS="cache.files=off,dropcacheonclose=false,category.create=lus,noforget,inodecalc=path-hash"
 
 INDIVIDUAL_DRIVE_MOUNT_DIR="/mnt/crypt_fs"
 MOUNT_POINT="/nfs/vault2"

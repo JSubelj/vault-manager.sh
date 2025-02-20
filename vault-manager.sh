@@ -410,7 +410,7 @@ init_drive() {
     fi
 
     log INFO "Device $block_dev is:"
-    smartctl -a $block_dev | grep "Device Model\|Model Family\|User Capacity"
+    smartctl -a $block_dev | grep -E "Device Model|Model Family|User Capacity" || true # have to add this because it throws err 32 if device not in smartctl db
     log WARN "WARNING: This will erase all data on $block_dev!"
     read -p "Type yes in all caps to proceed: " confirmation
 
@@ -426,7 +426,7 @@ init_drive() {
         log WARN "Directory at $HEADERS_BACKUP_DIR does not exist. Creating it."
         mkdir -p $HEADERS_BACKUP_DIR
     fi
-    name_and_serial=$(smartctl $block_dev -a | awk '/Device Model/{sub(/.*Device Model:[ \t]*/, ""); gsub(/ /, "-"); model=$0} /Serial Number/{printf "%s.%s\n", model, $3}')
+    name_and_serial=$(smartctl $block_dev -a | awk '/Device Model/{sub(/.*Device Model:[ \t]*/, ""); gsub(/ /, "-"); model=$0} /Serial Number/{printf "%s.%s\n", model, $3}') || true # have to add this because it throws err 32 if device not in smartctl db
     header_file="$HEADERS_BACKUP_DIR/$name_and_serial.header.bak"
 
     if [ -f "$header_file" ]; then
