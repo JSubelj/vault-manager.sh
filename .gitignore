@@ -5,3 +5,5 @@
 !env
 !LICENSE.md
 !_vault-manager.sh_completions
+!_fangorn-manager.sh_completions
+!fangorn-manager.sh

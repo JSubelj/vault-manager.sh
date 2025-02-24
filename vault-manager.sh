@@ -5,6 +5,8 @@ set -euo pipefail
 HDD_ENCRYPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HDD_ENCRYPT_DIR/.env"
 
+
+
 crypt_uuids=()
 crypt_names=()
 
@@ -125,7 +127,7 @@ check_and_init_crypttab_devices() {
         fi
         uuid="${uuid#UUID=}"
 
-        if blkid -U $uuid  >/dev/null 2>&1; then
+        if $blkid -U $uuid  >/dev/null 2>&1; then
             crypt_names+=($target_name)
             crypt_uuids+=($uuid)
         else
@@ -155,7 +157,7 @@ encrypt() {
         exit 1
     fi
 
-    if ! openssl enc -aes-256-cbc -md sha512 -pbkdf2 -iter 1000000 -salt -in "$input_file" -out "$output_file"; then
+    if ! $openssl enc -aes-256-cbc -md sha512 -pbkdf2 -iter 1000000 -salt -in "$input_file" -out "$output_file"; then
         log ERROR "Encryption failed."
         exit 1
     fi
@@ -173,7 +175,7 @@ decrypt() {
     encrypted_file="$1"
     decrypted_file="$2"
 
-    if ! openssl enc -aes-256-cbc -d -salt -md sha512 -pbkdf2 -iter 1000000 -in "$encrypted_file" -out "$decrypted_file"; then
+    if ! $openssl enc -aes-256-cbc -d -salt -md sha512 -pbkdf2 -iter 1000000 -in "$encrypted_file" -out "$decrypted_file"; then
         log ERROR "Decryption failed."
         exit 1
     fi
@@ -194,9 +196,9 @@ hdd_lock() {
 
         log INFO "Locking: $target_name UUID=$uuid"
 
-        if cryptsetup status "$target_name" >/dev/null 2>&1; then
+        if $cryptsetup status "$target_name" >/dev/null 2>&1; then
             log INFO "Closing $target_name"
-            cryptsetup close "$target_name"
+            $cryptsetup close "$target_name"
         else
             log WARN "Target $target_name already closed"
         fi
@@ -219,10 +221,10 @@ hdd_unlock() {
 
         log INFO "Unlocking: $target_name UUID=$uuid"
 
-        if blkid -U $uuid >/dev/null 2>&1; then
-            if ! cryptsetup status "$target_name" >/dev/null 2>&1; then
+        if $blkid -U $uuid >/dev/null 2>&1; then
+            if ! $cryptsetup status "$target_name" >/dev/null 2>&1; then
                 log INFO "Opening $target_name..."
-                cryptsetup open --key-file="$KEY_FILE" --type luks "/dev/disk/by-uuid/$uuid" "$target_name"
+                $cryptsetup open --key-file="$KEY_FILE" --type luks "/dev/disk/by-uuid/$uuid" "$target_name"
             else
                 log WARN "$target_name is already opened, skipping."
             fi
@@ -253,7 +255,7 @@ mount_drives() {
 
         blockdev="/dev/mapper/$target_name"
 
-        if mountpoint -q "$mount_point_indv"; then
+        if $mountpoint -q "$mount_point_indv"; then
             log INFO "Unmounting $mount_point_indv"
             umount "$mount_point_indv"
         fi
@@ -273,7 +275,7 @@ umount_drives() {
         fi
         mount_point_indv="$INDIVIDUAL_DRIVE_MOUNT_DIR/$target_name"
 
-        if mountpoint -q "$mount_point_indv"; then
+        if $mountpoint -q "$mount_point_indv"; then
             log INFO "Unmounting $mount_point_indv"
             umount "$mount_point_indv"
         fi
@@ -282,7 +284,7 @@ umount_drives() {
 
 # Mount Filesystem function
 mount_fs() {
-    if mountpoint -q "$MOUNT_POINT"; then
+    if $mountpoint -q "$MOUNT_POINT"; then
         log WARN "Media vault is already mounted"
         exit 0
     fi
@@ -295,13 +297,27 @@ mount_fs() {
     fi
 
     log INFO "Mounting with mergerfs on $MOUNT_POINT"
-    mergerfs -o "$MERGERFS_OPTIONS" "$INDIVIDUAL_DRIVE_MOUNT_DIR/$TARGET_BASE_NAME*" "$MOUNT_POINT"
+    $mergerfs -o "$MERGERFS_OPTIONS" "$INDIVIDUAL_DRIVE_MOUNT_DIR/$TARGET_BASE_NAME*" "$MOUNT_POINT"
+
+    log INFO "Checking if mountpoint in nfs exports."
+    in_exports=$(grep "$MOUNT_POINT" /etc/exports || true)
+    if [ ! -z "$in_exports" ]; then
+        log INFO "Starting nfs server"
+        systemctl start nfs-server.service
+    fi
 }
 
 # Unmount Filesystem function
 umount_fs() {
     log INFO "Killing mergerfs"
-    killall mergerfs >/dev/null 2>&1 || true
+    $killall mergerfs >/dev/null 2>&1 || true
+
+    log INFO "Checking if mountpoint in nfs exports."
+    in_exports=$(grep "$MOUNT_POINT" /etc/exports || true)
+    if [ ! -z "$in_exports" ]; then
+        log INFO "Stopping nfs server"
+        systemctl stop nfs-server.service
+    fi
 
     log INFO "Unmounting & locking disks"
 
@@ -315,7 +331,7 @@ setup_storage_system() {
     set +e
     check_storage_system
     if [ $? -eq  0 ]; then
-        log WARN "Storage system is already up and running. If you want to remount, first do close_storage_system."
+        log WARN "Storage system is already up and running. If you want to remount, first do close-storage-system."
         exit 1
     fi
     set -e
@@ -347,14 +363,14 @@ check_storage_system() {
         mount_point_indv="$INDIVIDUAL_DRIVE_MOUNT_DIR/$target_name"
 
         # Check if the cryptsetup device is open
-        if ! cryptsetup status "$target_name" >/dev/null 2>&1; then
+        if ! $cryptsetup status "$target_name" >/dev/null 2>&1; then
             log WARN "Target $target_name is not open."
             all_drives_ok=false
             continue
         fi
 
         # Check if the device is mounted
-        if ! mountpoint -q "$mount_point_indv"; then
+        if ! $mountpoint -q "$mount_point_indv"; then
             log WARN "Mount point $mount_point_indv is not mounted."
             all_drives_ok=false
             continue
@@ -364,7 +380,7 @@ check_storage_system() {
     done 
 
     # Check if the combined filesystem is mounted
-    if ! mountpoint -q "$MOUNT_POINT"; then
+    if ! $mountpoint -q "$MOUNT_POINT"; then
         log WARN "Combined filesystem is not mounted at $MOUNT_POINT"
         all_drives_ok=false
     else
@@ -410,7 +426,7 @@ init_drive() {
     fi
 
     log INFO "Device $block_dev is:"
-    smartctl -a $block_dev | grep -E "Device Model|Model Family|User Capacity" || true # have to add this because it throws err 32 if device not in smartctl db
+    $smartctl -a $block_dev | grep -E "Device Model|Model Family|User Capacity" || true # have to add this because it throws err 32 if device not in smartctl db
     log WARN "WARNING: This will erase all data on $block_dev!"
     read -p "Type yes in all caps to proceed: " confirmation
 
@@ -426,7 +442,7 @@ init_drive() {
         log WARN "Directory at $HEADERS_BACKUP_DIR does not exist. Creating it."
         mkdir -p $HEADERS_BACKUP_DIR
     fi
-    name_and_serial=$(smartctl $block_dev -a | awk '/Device Model/{sub(/.*Device Model:[ \t]*/, ""); gsub(/ /, "-"); model=$0} /Serial Number/{printf "%s.%s\n", model, $3}') || true # have to add this because it throws err 32 if device not in smartctl db
+    name_and_serial=$($smartctl $block_dev -a | awk '/Device Model/{sub(/.*Device Model:[ \t]*/, ""); gsub(/ /, "-"); model=$0} /Serial Number/{printf "%s.%s\n", model, $3}') || true # have to add this because it throws err 32 if device not in smartctl db
     header_file="$HEADERS_BACKUP_DIR/$name_and_serial.header.bak"
 
     if [ -f "$header_file" ]; then
@@ -435,21 +451,21 @@ init_drive() {
     fi
     log INFO "Header file does not exist."
 
-    old_uuid=$(blkid -s UUID -o value $block_dev)
+    old_uuid=$($blkid -s UUID -o value $block_dev)
     log INFO "Checking if current $block_dev is in crypttab (UUID=$old_uuid)"
     remove_uuid_from_crypttab "$old_uuid"
 
     decrypt "$ENCRYPTED_KEY" "$KEY_FILE"
 
     log INFO "Formating the device $block_dev"
-    cryptsetup -v -c aes-xts-plain64 -h sha512 -s 512 luksFormat --pbkdf pbkdf2 --key-file $KEY_FILE "$block_dev"
+    $cryptsetup -v -c aes-xts-plain64 -h sha512 -s 512 luksFormat --pbkdf pbkdf2 --key-file $KEY_FILE "$block_dev"
     log INFO "Device $block_dev successfully formated"
 
     log INFO "Generating header backup file"
-    cryptsetup luksHeaderBackup --header-backup-file $header_file $block_dev
+    $cryptsetup luksHeaderBackup --header-backup-file $header_file $block_dev
     log INFO "Header succesfully generated."
 
-    uuid=$(blkid -s UUID -o value $block_dev)
+    uuid=$($blkid -s UUID -o value $block_dev)
     log INFO "Device uuid is $uuid"
 
     new_device_number=$(grep -oP "$TARGET_BASE_NAME\K\d+" $CRYPTTAB | sort -n | tail -n 1 || echo "0")
@@ -466,7 +482,7 @@ init_drive() {
 
     log INFO "Crypttab ($CRYPTTAB) updated with new device"
 
-    if cryptsetup status "$new_device_name" >/dev/null 2>&1; then
+    if $cryptsetup status "$new_device_name" >/dev/null 2>&1; then
         log WARN "Device $new_device_name is already open."
 
         read -p "Do you want to close the device $new_device_name? ([yes]/no): " close_confirmation
@@ -475,12 +491,12 @@ init_drive() {
                 exit 1;
             else
                 log INFO "Closing device $new_device_name as requested."
-                cryptsetup close "$new_device_name"
+                $cryptsetup close "$new_device_name"
             fi
     fi
 
     log INFO "Opening new device to create a filesystem"
-    cryptsetup open --key-file="/tmp/cryptkey" --type luks "/dev/disk/by-uuid/$uuid" "$new_device_name"
+    $cryptsetup open --key-file="/tmp/cryptkey" --type luks "/dev/disk/by-uuid/$uuid" "$new_device_name"
 
     mapped_device="/dev/mapper/$new_device_name"
     log INFO "Device opened and can be accessed on $mapped_device"
@@ -491,11 +507,11 @@ init_drive() {
     fi
 
     log INFO "Formatting device $mapped_device with $filesystem"
-    mkfs."$filesystem" "$mapped_device"
+    $mkfs."$filesystem" "$mapped_device"
     sleep 1 # this has to be here otherwise it throws an error
     log INFO "Device successfully formated."
     log INFO "Closing the device."
-    cryptsetup close $mapped_device
+    $cryptsetup close $mapped_device
 
     remove_cryptkey
 

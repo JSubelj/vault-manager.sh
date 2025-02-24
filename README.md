@@ -24,7 +24,38 @@ dd bs=64 count=1 if=/dev/random of=/tmp/cryptkey iflag=fullblock
 ./vault-manager.sh encrypt /tmp/cryptkey ./cryptkey_encrypted
 ```
 
+## vault-manager.sh -h
+```
+Usage: /root/lock-and-loaded/vault-manager.sh [command] [options]
 
+If no command it just checks crypttab
+
+Primary commands:
+  check-storage-system                  Check if storage system is mounted and operational
+  setup-storage-system                  Setup and initialize the complete storage system
+  close-storage-system                  Safely close and lock the storage system
+
+Initialisation commands:
+  init-drive <block-dev>                Initialises the drive
+
+Debug commands:
+  encrypt <input_file> <output_file>    Encrypt a file
+  decrypt <input_file> <output_file>    Decrypt a file
+  hdd-lock                              Lock all encrypted drives
+  hdd-unlock                            Unlock all encrypted drives
+  mount-drives                          Mount individual encrypted drives
+  umount-drives                         Unmount individual encrypted drives
+  mount-fs                              Mount the combined filesystem
+  umount-fs                             Unmount the combined filesystem
+
+Options:
+  -h, --help                            Show this help message
+
+Examples:
+  /root/lock-and-loaded/vault-manager.sh encrypt secret.txt secret.txt.enc
+  /root/lock-and-loaded/vault-manager.sh hdd-unlock
+  /root/lock-and-loaded/vault-manager.sh mount-fs
+```
 
 
 ## Using
@@ -64,9 +95,26 @@ MERGERFS_OPTIONS="cache.files=off,dropcacheonclose=false,category.create=lus"
 INDIVIDUAL_DRIVE_MOUNT_DIR="/mnt/crypt_fs"
 # Where filesystem should be mounted
 MOUNT_POINT="/mnt/vault"
+...
 ```
 
+## Fangorn manager
+Fangorn manager is used to manipulate proxmox with vault. It's named after my server, fangorn, but should work with your system as well, but I hadn't put all that time into it so... there be dragons!
 
+## fangorn-manager.sh -h
+```
+Usage: /root/lock-and-loaded/fangorn-manager.sh [command]
+
+Commands:
+  unlock-vault                  Runs when no argument. Unlock the vault storage system and restarts VMs dependant on vault.
+  lock-vault                    Lock the vault storage system
+  send-mail                     Sends mail if vault is locked
+  stop-nonessential-vms         Stops all VMs that are not essential.
+  shutdown-vault-dependent-vms  Shut down VMs that depend on the vault
+  restart-vault-dependent-vms   Restart VMs that depend on the vault
+  ensure-vms                    Ensure specified VMs are running
+  -h|--help                     Display this help message
+```
 
 ## References and docs:
 - [Encrypted Btrfs storage setup and maintenance guide](https://gist.github.com/MaxXor/ba1665f47d56c24018a943bb114640d7)
