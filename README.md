@@ -26,7 +26,7 @@ dd bs=64 count=1 if=/dev/random of=/tmp/cryptkey iflag=fullblock
 
 ## vault-manager.sh -h
 ```
-Usage: /root/lock-and-loaded/vault-manager.sh [command] [options]
+Usage: vault-manager.sh [command] [options]
 
 If no command it just checks crypttab
 
@@ -103,7 +103,7 @@ Fangorn manager is used to manipulate proxmox with vault. It's named after my se
 
 ## fangorn-manager.sh -h
 ```
-Usage: /root/lock-and-loaded/fangorn-manager.sh [command]
+Usage: fangorn-manager.sh [command]
 
 Commands:
   unlock-vault                  Runs when no argument. Unlock the vault storage system and restarts VMs dependant on vault.
